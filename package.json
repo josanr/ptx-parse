@@ -1,0 +1,9 @@
+{
+  "name": "ptx-parse",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "iconv-lite": "^0.4.24"
+  }
+}
