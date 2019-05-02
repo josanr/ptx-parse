@@ -89,7 +89,8 @@ class CutRiteLink {
                 if (this.boards[boardId].isOffcut) {
                     patterns[patternId].offcutId = this.boards[boardId].offcutId;
                 }
-                patterns[patternId].cuts = this.parseMap(patternId);
+
+                patterns[patternId].cuts = this.parsePattern(patternId);
 
             }
 
@@ -99,7 +100,7 @@ class CutRiteLink {
         return patterns;
     }
 
-    parseMap(patternId) {
+    parsePattern(patternId) {
         const cuts = [];
 
         for (let id in this.lines) {
