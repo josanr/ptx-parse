@@ -33,41 +33,38 @@ class CutRiteLink {
         }
 
 
-        // this.materials = this.getMaterials();
-        // this.boards = this.getBoards();
-        // this.offcuts = this.getOffcuts();
-        //
-        // this.toolId = this.getToolId();
-        // this.parts = this.getParts();
+        this.materials = this.getMaterials();
+        this.boards = this.getBoards();
+        this.offcuts = this.getOffcuts();
+
+        this.toolId = this.getToolId();
+        this.parts = this.getParts();
 
 
-        // console.log(JSON.stringify(this.parseCuts(1)));
+        const patterns = this.getPatterns();
 
 
-        // const maps = this.getPatterns();
-        //
-        //
-        //
-        //
-        // const goods = {};
-        // for (const patternId in maps) {
-        //     const map = maps[patternId];
-        //     if (goods[map.gid] === undefined) {
-        //         goods[map.gid] = {};
-        //     }
-        //     goods[map.gid][patternId] = map;
-        // }
-        //
-        //
-        // return {
-        //     toolId: this.toolId,
-        //     goods: goods
-        // };
+
+
+        const goodsMapList = {};
+        for (const patternId in patterns) {
+            const map = patterns[patternId];
+            if (goodsMapList[map.gid] === undefined) {
+                goodsMapList[map.gid] = {};
+            }
+            goodsMapList[map.gid][patternId] = map;
+        }
+
+
+        return {
+            toolId: this.toolId,
+            goods: goodsMapList
+        };
     }
 
     getPatterns() {
 
-        const maps = {};
+        const patterns = {};
         for (const id in this.lines) {
             const line = this.lines[id];
 
@@ -75,7 +72,7 @@ class CutRiteLink {
                 const patternId = +line[2];
                 const boardId = +line[3];
 
-                maps[patternId] = {
+                patterns[patternId] = {
                     mapNum: patternId,
                     length: this.boards[boardId].length,
                     width: this.boards[boardId].width,
@@ -90,16 +87,16 @@ class CutRiteLink {
                 };
 
                 if (this.boards[boardId].isOffcut) {
-                    maps[patternId].offcutId = this.boards[boardId].offcutId;
+                    patterns[patternId].offcutId = this.boards[boardId].offcutId;
                 }
-                maps[patternId].cuts = this.parseMap(patternId);
+                patterns[patternId].cuts = this.parseMap(patternId);
 
             }
 
 
         }
 
-        return maps;
+        return patterns;
     }
 
     parseMap(patternId) {
