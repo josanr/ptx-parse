@@ -167,7 +167,16 @@ class CutRiteLink {
     }
 
     sumCutLines(nodeTree){
+        let totalLength = 0;
+        for(let idx in nodeTree){
+            const node = nodeTree[idx];
+            totalLength += node.length;
+            if(node.children.length !== 0){
+                totalLength += this.sumCutLines(node.children);
+            }
+        }
 
+        return totalLength;
     }
 
 
