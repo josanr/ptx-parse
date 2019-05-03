@@ -202,7 +202,6 @@ class CutRiteLink {
         }
 
 
-
         const cutLines = this.getChildNodes(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
 
         const cutItems = this.buildCutItems(cutLines);
@@ -233,7 +232,7 @@ class CutRiteLink {
                 }else{
                     dx += offset;
                 }
-                if(this.getLayer(list[idx + 1].func) >= layer) {
+                if((idx + 1) < list.length && this.getLayer(list[idx + 1].func) >= layer) {
                     currentParrent = nodes.push(
                         new CutTreeItem(line.part, dx, dy, crossCut, dimmension, line.dimmension)
                     );
