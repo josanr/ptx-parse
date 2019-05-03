@@ -261,7 +261,7 @@ class CutRiteLink {
         };
     }
 
-    static getLayer(func){
+    getLayer(func){
         if(func - 90 > 0){
             return func - 90;
         }
