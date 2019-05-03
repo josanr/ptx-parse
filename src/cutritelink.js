@@ -3,7 +3,17 @@
  */
 
 'use strict';
-
+class CutTreeItem {
+    constructor(part, x, y, crossCut, length, width){
+        this.part =  part;
+        this.x =  x;
+        this.y =  y;
+        this.crossCut =  crossCut;
+        this.length =  length;
+        this.offset =  width;
+        this.children =  [];
+    }
+}
 class CutRiteLink {
     constructor() {
         let isNodeWebkit = (typeof process === "object");
@@ -11,7 +21,7 @@ class CutRiteLink {
             throw Error('Данный раздел не работает в режиме Браузера.');
 
         }
-
+        this.kerf = 4.4;
         this.lines = null;
         this.toolId = null;
         this.parts = {};
@@ -62,6 +72,17 @@ class CutRiteLink {
         };
     }
 
+
+    /*
+
+    patternType
+    Fixed Pattern
+    0 = rip length first – non-head cut pattern
+    1 = turn board before ripping - non-head cut pattern
+    2 = head cut pattern – head cut across width
+    3 = head cut pattern – head cut along length
+    4 = crosscut only
+     */
     getPatterns() {
 
         const patterns = {};
@@ -71,6 +92,7 @@ class CutRiteLink {
             if (line[0] === "PATTERNS") {
                 const patternId = +line[2];
                 const boardId = +line[3];
+                const patternType = +line[4];
 
                 patterns[patternId] = {
                     mapNum: patternId,
@@ -80,7 +102,7 @@ class CutRiteLink {
                     numCuts: 0,
                     lengthCuts: 0,
                     boardId: boardId,
-                    type: +line[4],
+                    type: patternType,
                     totalTime: +line[10],
                     toolId: this.toolId,
                     gid: this.boards[boardId].gid,
@@ -90,7 +112,8 @@ class CutRiteLink {
                     patterns[patternId].offcutId = this.boards[boardId].offcutId;
                 }
 
-                patterns[patternId].cuts = this.parsePattern(patternId);
+                this.parsePattern(patterns[patternId]);
+
 
             }
 
@@ -100,16 +123,15 @@ class CutRiteLink {
         return patterns;
     }
 
-    parsePattern(patternId) {
+    parsePattern(pattern) {
         const cuts = [];
-
         for (let id in this.lines) {
             const line = this.lines[id];
 
             if (line[0] !== "CUTS") {
                 continue;
             }
-            if (line[2].trim() !== "" + patternId) {
+            if (+line[2].trim() !== pattern.mapNum) {
                 continue;
             }
 
@@ -119,21 +141,22 @@ class CutRiteLink {
             } else if(line[8].trim() !== "0"){
                 part = this.parts[+line[8]];
             }
+
             let kerf = 0;
             if(+line[5].trim() - 90 > 0){
-                kerf = 4.4;
+                kerf = this.kerf;
             }
 
 
 
             const cut = {
                 part: part,
-                patternId: patternId,
+                patternId: pattern.mapNum,
                 cutIndex: +line[3].trim(),
                 sequence: +line[4].trim(),
                 func: +line[5].trim(),
                 dimmension: +line[6].trim() + kerf,
-                partIndex: +line[8].trim(),
+                partIndex: (part !== null) ? part.idx : 0,
                 quntPart: +line[9].trim() === 0 ? 0 : 1,
             };
             cuts.push(cut);
@@ -142,27 +165,111 @@ class CutRiteLink {
 
                 const cut = {
                     part: part,
-                    patternId: patternId,
+                    patternId: pattern.mapNum,
                     cutIndex: +line[3].trim(),
                     sequence: +line[4].trim(),
                     func: +line[5].trim(),
                     dimmension: +line[6].trim() + kerf,
-                    partIndex: +line[8].trim(),
+                    partIndex: (part !== null) ? part.idx : 0,
                     quantPart: +line[9].trim() === 0 ? 0 : 1,
                 };
                 cuts.push(cut);
             }
         }
 
-        const cutLines = this.getChildNodes(1, cuts, 1, cuts[0].dimmension, false, 0, 0).nodes;
+        let crossCut = false;
+        let dimmension = pattern.length;
+        let startPoint = 1;
+        let startLayer = 1;
+
+
+        if(pattern.type === 1){
+            crossCut = true;
+            dimmension = pattern.width;
+
+            startPoint = 1;
+            startLayer = 1;
+        }else if(pattern.type === 2){
+            //board is divided in stripes by width
+            crossCut = true;
+            dimmension = pattern.width;
+            startPoint = 0;
+            startLayer = 0;
+        }else if(pattern.type === 3){
+            //board is divided in stripes by length
+            startPoint = 0;
+            startLayer = 0;
+        }
+
+
+
+        const cutLines = this.getChildNodes(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
 
         const cutItems = this.buildCutItems(cutLines);
 
         const cutLength = this.sumCutLines(cutLines);
 
+        pattern.lengthCuts = cutLength;
+        pattern.cuts = cutItems;
 
-        return cutItems;
+        return {
+            cutItems: cutItems,
+            cutLength: cutLength
+        };
     }
+
+    getChildNodes(startPoint, list, layer, dimmension, crossCut, x, y){
+        let currentParrent = null;
+        let nodes = [];
+        let dx = x;
+        let dy = y;
+        let offset = 0;
+        for(let idx = startPoint; idx < list.length; idx++){
+            const line = list[idx];
+            // console.log(this.getLayer(line.func));
+            if(this.getLayer(line.func) === layer){
+                if(crossCut === false){
+                    dy += offset;
+                }else{
+                    dx += offset;
+                }
+                if(this.getLayer(list[idx + 1].func) >= layer) {
+                    currentParrent = nodes.push(
+                        new CutTreeItem(line.part, dx, dy, crossCut, dimmension, line.dimmension)
+                    );
+                    offset = line.dimmension;
+                }
+            }else if(this.getLayer(line.func) > layer){
+                //get children
+                const result = this.getChildNodes(idx, list, layer + 1, nodes[currentParrent - 1].offset, !crossCut, dx, dy);
+                nodes[currentParrent - 1].children = result.nodes;
+                idx = result.lastIndex;
+            }else if(this.getLayer(line.func) < layer && idx + 1 < list.length){
+                // console.log("return" + line.func);
+                // console.log(this.getLayer(line.func));
+                // console.log(line);
+                return {
+                    nodes: nodes,
+                    lastIndex: idx -1
+                };
+            }
+        }
+
+        return {
+            nodes: nodes,
+            lastIndex: list.length
+        };
+    }
+
+    static getLayer(func){
+        if(func - 90 > 0){
+            return func - 90;
+        }
+
+        return func;
+    }
+
+
 
     sumCutLines(nodeTree){
         let totalLength = 0;
@@ -204,87 +311,6 @@ class CutRiteLink {
         }
         return mapcuts;
     }
-
-
-
-    getChildNodes(startPoint, list, layer, dimmension, crossCut, x, y){
-        let start = false;
-        let currentParrent = null;
-        let nodes = [];
-        let dx = x;
-        let dy = y;
-        let offset = 0;
-        for(let idx = startPoint; idx < list.length; idx++){
-            const line = list[idx];
-
-            if(this.isBorderFunc(line.func) && layer === this.getLayerId(line.func)){
-                if(start === false){
-                    start = true;
-                    currentParrent = nodes.push({
-                        part: line.part,
-                        x: dx,
-                        y: dy,
-                        crossCut: crossCut,
-                        length: dimmension,
-                        width: line.dimmension,
-                        children: []
-                    });
-                    offset = line.dimmension;
-                }else if(start === true){
-                    return {
-                        nodes: nodes,
-                        lastIndex: idx
-                    };
-                }
-
-
-            }else if(layer !== this.getLayerId(line.func)){
-                const result = this.getChildNodes(idx, list, this.getLayerId(line.func), nodes[currentParrent - 1].width, !crossCut, dx, dy);
-                nodes[currentParrent - 1].children = result.nodes;
-                idx = result.lastIndex;
-
-            }else{
-                if(crossCut === false){
-                    dy += offset;
-                }else{
-                    dx += offset;
-                }
-                currentParrent = nodes.push({
-                    part: line.part,
-                    x: dx,
-                    y: dy,
-                    crossCut: crossCut,
-                    length: dimmension,
-                    width: line.dimmension,
-                    children: []
-                });
-                offset = line.dimmension;
-            }
-
-
-
-
-        }
-    }
-
-    isBorderFunc(func){
-        return (func - 90) > 0;
-    }
-
-    getLayerId(func){
-        if(func - 90 > 0){
-            return func - 90;
-        }
-
-        return func;
-    }
-
-
-
-
-
-
-
 
     getOffcuts() {
         const offcuts = {};
