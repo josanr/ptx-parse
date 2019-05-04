@@ -155,3 +155,30 @@ test("counted by hand length for pattern 1", () => {
 
 
 });
+
+
+test("map items must have coordinates set", () => {
+    const parser = new CutRiteLink();
+
+    const file = fs.readFileSync('./tests/184417-1.ptx');
+    const convertedFile = iconv.decode(file, 'win1251');
+
+
+
+    const maps = parser.parse(convertedFile.toString());
+
+    for(let gid in maps.goods) {
+        const mapGood = maps.goods[gid];
+        for(const mid in mapGood){
+            const map = mapGood[mid];
+            for(let cid in map.cuts){
+                const cutItem = map.cuts[cid];
+                expect(cutItem.x).not.toBe(null);
+                expect(cutItem.y).not.toBe(null);
+            }
+
+        }
+
+    }
+
+});
