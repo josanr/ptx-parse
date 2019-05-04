@@ -223,10 +223,12 @@ class CutRiteLink {
         pattern.lengthCuts = cutLength;
         pattern.cuts = cutItems;
 
-        return {
-            cutItems: cutItems,
-            cutLength: cutLength
-        };
+
+        // return {
+        //     cutItems: cutItems,
+        //     cutLines: cutLines,
+        //     cutLength: cutLength
+        // };
     }
 
     buildCutItems(startPoint, list, layer, dimmension, crossCut, x, y){
