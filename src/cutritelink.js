@@ -14,6 +14,21 @@ class CutTreeItem {
         this.children =  [];
     }
 }
+
+class CutItem {
+    constructor(part, x, y){
+        this.id = part.idx;
+        this.length = part.length;
+        this.width = part.width;
+        this.x = x;
+        this.y = y;
+        this.unknown = "";
+        this.degreese = 0;
+        this.uid = part.uid;
+    }
+}
+
+
 class CutRiteLink {
     constructor() {
         let isNodeWebkit = (typeof process === "object");
@@ -217,7 +232,46 @@ class CutRiteLink {
         };
     }
 
-    getChildNodes(startPoint, list, layer, dimmension, crossCut, x, y){
+    buildCutItems(startPoint, list, layer, dimmension, crossCut, x, y){
+        let nodes = [];
+        let dx = x;
+        let dy = y;
+        let offset = 0;
+        for(let idx = startPoint; idx < list.length; idx++){
+            const line = list[idx];
+
+            if(this.getLayer(line.func) === layer){
+                if(crossCut === false){
+                    dy += offset;
+                }else{
+                    dx += offset;
+                }
+                if(line.part !== null) {
+                    nodes.push(
+                        new CutItem(line.part, dx, dy)
+                    );
+                }
+                offset = line.dimmension;
+
+            }else if(this.getLayer(line.func) > layer){
+                //get children
+                const result = this.buildCutItems(idx, list, layer + 1, offset, !crossCut, dx, dy);
+                nodes = nodes.concat(result.nodes);
+                idx = result.lastIndex;
+            }else if(this.getLayer(line.func) < layer){
+                return {
+                    nodes: nodes,
+                    lastIndex: idx -1
+                };
+            }
+        }
+        return {
+            nodes: nodes,
+            lastIndex: list.length
+        };
+    }
+
+    getCutLines(startPoint, list, layer, dimmension, crossCut, x, y){
         let currentParrent = null;
         let nodes = [];
         let dx = x;
@@ -281,34 +335,6 @@ class CutRiteLink {
         }
 
         return totalLength;
-    }
-
-
-    buildCutItems(nodeTree){
-        const mapcuts = [];
-        for(let idx in nodeTree){
-            const node = nodeTree[idx];
-            if(node.part === null){
-
-                const children = this.buildCutItems(node.children);
-                for(let id in children){
-                    mapcuts.push(children[id]);
-                }
-            }else{
-                mapcuts.push({
-                    id: node.part.idx,
-                    length: node.part.length,
-                    width: node.part.width,
-                    x: node.x,
-                    y: node.y,
-                    unknown: "",
-                    degreese: 0,
-                    uid: node.part.uid
-                });
-            }
-
-        }
-        return mapcuts;
     }
 
     getOffcuts() {
