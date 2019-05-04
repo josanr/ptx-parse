@@ -220,6 +220,11 @@ class CutRiteLink {
         const cutLines = this.getCutLines(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
         const cutLength = this.sumCutLines(cutLines);
 
+
+        const cutItems = this.buildCutItems(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
+
+
+
         pattern.lengthCuts = cutLength;
         pattern.cuts = cutItems;
 
