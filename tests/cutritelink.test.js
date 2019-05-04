@@ -116,7 +116,7 @@ test("pattern 2 cutItems test", () => {
 
     const cutItems = maps.goods['47353']['2']["cuts"];
 
-    expect(cutItems.length).toBe(15);
+    expect(cutItems.length).toBe(17);
 });
 
 
