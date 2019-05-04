@@ -139,25 +139,19 @@ test("parsed small pattern with one item", () => {
 
 
 
-// test("parsed small pattern with one item", () => {
-//     const parser = new CutRiteLink();
-//
-//     const file = fs.readFileSync('./tests/small_pattern.ptx');
-//     const convertedFile = iconv.decode(file, 'win1251');
-//
-//
-//
-//     const maps = parser.parse(convertedFile.toString());
-//
-//     const map = maps.goods['26381']['1'];
-//     expect(map.lengthCuts).toBe(2063);
-//     expect(map.cuts.length).toBe(2);
-//
-//     let cutItem = map.cuts[0];
-//     expect(cutItem.x).toBe(15);
-//     expect(cutItem.y).toBe(15);
-//
-//     cutItem = map.cuts[1];
-//     expect(cutItem.x).toBe(325);
-//     expect(cutItem.y).toBe(0);
-// });
+test("counted by hand length for pattern 1", () => {
+    const parser = new CutRiteLink();
+
+    const file = fs.readFileSync('./tests/184417-1.ptx');
+    const convertedFile = iconv.decode(file, 'win1251');
+
+
+
+    const maps = parser.parse(convertedFile.toString());
+
+    const map = maps.goods['8325']['1'];
+    expect(map.lengthCuts).toBe(32811);
+    expect(map.cuts.length).toBe(18);
+
+
+});
