@@ -217,10 +217,7 @@ class CutRiteLink {
         }
 
 
-        const cutLines = this.getChildNodes(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
-
-        const cutItems = this.buildCutItems(cutLines);
-
+        const cutLines = this.getCutLines(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
         const cutLength = this.sumCutLines(cutLines);
 
         pattern.lengthCuts = cutLength;
@@ -279,14 +276,13 @@ class CutRiteLink {
         let offset = 0;
         for(let idx = startPoint; idx < list.length; idx++){
             const line = list[idx];
-            // console.log(this.getLayer(line.func));
             if(this.getLayer(line.func) === layer){
                 if(crossCut === false){
                     dy += offset;
                 }else{
                     dx += offset;
                 }
-                if((idx + 1) < list.length && this.getLayer(list[idx + 1].func) >= layer) {
+                if((idx + 1) < list.length && (this.getLayer(list[idx + 1].func) >= layer)) {
                     currentParrent = nodes.push(
                         new CutTreeItem(line.part, dx, dy, crossCut, dimmension, line.dimmension)
                     );
@@ -294,7 +290,7 @@ class CutRiteLink {
                 }
             }else if(this.getLayer(line.func) > layer){
                 //get children
-                const result = this.getChildNodes(idx, list, layer + 1, nodes[currentParrent - 1].offset, !crossCut, dx, dy);
+                const result = this.getCutLines(idx, list, layer + 1, nodes[currentParrent - 1].offset, !crossCut, dx, dy);
                 nodes[currentParrent - 1].children = result.nodes;
                 idx = result.lastIndex;
             }else if(this.getLayer(line.func) < layer && idx + 1 < list.length){
