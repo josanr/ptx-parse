@@ -227,6 +227,7 @@ class CutRiteLink {
 
         pattern.lengthCuts = cutLength;
         pattern.cuts = cutItems;
+        pattern.cutLines = cutLines;
 
 
         // return {
