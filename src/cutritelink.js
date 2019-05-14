@@ -215,26 +215,28 @@ class CutRiteLink {
             startPoint = 0;
             startLayer = 0;
         }
+        let cutLines = {};
+        let cutLength = 0;
+        try {
+            cutLines = this.getCutLines(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
+            cutLength = this.sumCutLines(cutLines);
+        }catch (e) {
+            console.log(e);
+            console.log(pattern);
+        }
 
-
-        const cutLines = this.getCutLines(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
-        const cutLength = this.sumCutLines(cutLines);
-
-
-        const cutItems = this.buildCutItems(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
-
-
+        let cutItems = {};
+        try {
+            cutItems = this.buildCutItems(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
+        }catch (e) {
+            console.log(e);
+            console.log(pattern);
+        }
 
         pattern.lengthCuts = cutLength;
         pattern.cuts = cutItems;
         pattern.cutLines = cutLines;
 
-
-        // return {
-        //     cutItems: cutItems,
-        //     cutLines: cutLines,
-        //     cutLength: cutLength
-        // };
     }
 
     buildCutItems(startPoint, list, layer, dimmension, crossCut, x, y){
@@ -302,9 +304,6 @@ class CutRiteLink {
                 nodes[currentParrent - 1].children = result.nodes;
                 idx = result.lastIndex;
             }else if(this.getLayer(line.func) < layer && idx + 1 < list.length){
-                // console.log("return" + line.func);
-                // console.log(this.getLayer(line.func));
-                // console.log(line);
                 return {
                     nodes: nodes,
                     lastIndex: idx -1
