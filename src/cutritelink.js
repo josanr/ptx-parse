@@ -345,7 +345,7 @@ class CutRiteLink {
         for (const id in this.lines) {
             const line = this.lines[id];
             if (line[0] === "OFFCUTS") {
-                if (+line[8] > 0) {
+                if (+line[7] > 0) {
                     offcuts[+line[2]] = {
                         idx: "Обрезок",
                         uid: 0,
