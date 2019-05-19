@@ -348,7 +348,7 @@ class CutRiteLink {
                 if (+line[7] > 0) {
                     offcuts[+line[2]] = {
                         idx: "Обрезок",
-                        uid: 0,
+                        uid: +line[2],
                         gid: this.materials[+line[4]].gid,
                         length: Math.floor(+line[5]),
                         width: Math.floor(+line[6]),

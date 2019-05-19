@@ -120,3 +120,21 @@ test("pattern 2 cutItems test", () => {
 });
 
 
+test("offcuts state in map data", () => {
+    const parser = new CutRiteLink();
+
+    const file = fs.readFileSync('./tests/test01.ptx');
+    const convertedFile = iconv.decode(file, 'win1251');
+
+
+
+    const maps = parser.parse(convertedFile.toString());
+
+    const cutItems = maps.goods['47353']['2']["cuts"];
+    for(let idx in cutItems){
+        if(cutItems[idx].id === 'Обрезок'){
+            expect(cutItems[idx].uid).not.toBe(0);
+        }
+    }
+});
+
