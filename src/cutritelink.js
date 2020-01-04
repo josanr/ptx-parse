@@ -16,7 +16,7 @@ class CutTreeItem {
 }
 
 class CutItem {
-    constructor(part, x, y){
+    constructor(part, x, y, num){
         this.id = part.idx;
         this.length = part.length;
         this.width = part.width;
@@ -25,6 +25,7 @@ class CutItem {
         this.unknown = "";
         this.degreese = 0;
         this.uid = part.uid;
+        this.count = num;
     }
 }
 
@@ -54,9 +55,8 @@ class CutRiteLink {
 
 
         for (const id in this.lines) {
-            this.lines[id] = this.lines[id].split(",");
+            this.lines[id] = this.lines[id].split(",").map(v => v.trim());
         }
-
 
         this.materials = this.getMaterials();
         this.boards = this.getBoards();
@@ -68,19 +68,61 @@ class CutRiteLink {
 
         const patterns = this.getPatterns();
 
-
-
-
         const goodsMapList = {};
         for (const patternId in patterns) {
             const map = patterns[patternId];
             if (goodsMapList[map.gid] === undefined) {
-                goodsMapList[map.gid] = {};
+                goodsMapList[map.gid] = [];
             }
-            goodsMapList[map.gid][patternId] = map;
+
+            if(map.numSheets === 1){
+                goodsMapList[map.gid].push(map);
+            }else{
+                for(let i = 1; i <= map.numSheets; i++){
+                    const clonedMap = {};
+                    for(let propId in map){
+                        if(propId === 'cuts'){
+                            continue;
+                        }
+                        if(propId === 'cutLines'){
+                            clonedMap[propId] = JSON.parse(JSON.stringify(map[propId]));
+                            continue;
+                        }
+                        clonedMap[propId] = map[propId];
+                    }
+                    clonedMap.numSheets = 1;
+                    clonedMap.sheetSerial = i;
+                    clonedMap.cuts = [];
+                    let lastX = -1;
+                    let lastY = -1;
+                    for(let cid = 0; cid < map.cuts.length; cid++){
+                        if(map.cuts[cid].count <= 0){
+                            continue;
+                        }
+                        const cut = map.cuts[cid];
+                        if(lastX === cut.x && lastY === cut.y){
+                            continue;
+                        }
+                        const cloneCut = {
+                            id: cut.id,
+                            length: cut.length,
+                            width: cut.width,
+                            x: cut.x,
+                            y: cut.y,
+                            unknown: cut.unknown,
+                            degreese: cut.degreese,
+                            uid: cut.uid
+                        };
+                        clonedMap.cuts.push(cloneCut);
+                        cut.count--;
+                        lastX = cut.x;
+                        lastY = cut.y;
+                    }
+                    goodsMapList[map.gid].push(clonedMap);
+                }
+            }
+
         }
-
-
         return {
             toolId: this.toolId,
             goods: goodsMapList
@@ -98,6 +140,19 @@ class CutRiteLink {
     3 = head cut pattern – head cut along length
     4 = crosscut only
      */
+
+    /*
+    * JOB_INDEX, 1
+    * PTN_INDEX, 2
+    * BRD_INDEX, 3
+    * TYPE,      4
+    * QTY_RUN,   5
+    * QTY_CYCLES,6
+    * MAX _BOOK, 7
+    * PICTURE,   8
+    * CYCLE_TIME,9
+    * TOTAL_TIME 10
+    * */
     getPatterns() {
 
         const patterns = {};
@@ -108,12 +163,14 @@ class CutRiteLink {
                 const patternId = +line[2];
                 const boardId = +line[3];
                 const patternType = +line[4];
+                const mapCount = +line[5];
 
                 patterns[patternId] = {
                     mapNum: patternId,
                     length: this.boards[boardId].length,
                     width: this.boards[boardId].width,
-                    numSheets: +line[5],
+                    numSheets: mapCount,
+                    sheetSerial: 1,
                     numCuts: 0,
                     lengthCuts: 0,
                     boardId: boardId,
@@ -126,19 +183,13 @@ class CutRiteLink {
                 if (this.boards[boardId].isOffcut) {
                     patterns[patternId].offcutId = this.boards[boardId].offcutId;
                 }
-
-                this.parsePattern(patterns[patternId]);
-
-
+                this.parseCuts(patterns[patternId]);
             }
-
-
         }
-
         return patterns;
     }
 
-    parsePattern(pattern) {
+    parseCuts(pattern) {
         const cuts = [];
         for (let id in this.lines) {
             const line = this.lines[id];
@@ -146,47 +197,57 @@ class CutRiteLink {
             if (line[0] !== "CUTS") {
                 continue;
             }
-            if (+line[2].trim() !== pattern.mapNum) {
+            if (+line[2] !== pattern.mapNum) {
                 continue;
             }
 
+
             let part = null;
-            if (line[8].trim()[0] === "X") {
-                part = this.offcuts[+line[8].trim().slice(1)];
-            } else if(line[8].trim() !== "0"){
+            if (line[8][0] === "X") {
+                part = this.offcuts[+line[8].slice(1)];
+            } else if(line[8] !== "0"){
                 part = this.parts[+line[8]];
             }
 
             let kerf = 0;
-            if(+line[5].trim() - 90 > 0){
+            if(+line[5] - 90 > 0){
                 kerf = this.kerf;
             }
 
-
+            const cutRepeat = +line[7];
+            const partCount = +line[9];
+            let afterRepeatCount = 0;
+            if(part !== null){
+                if(cutRepeat !== 0){
+                    afterRepeatCount = Math.round(partCount / cutRepeat)
+                }else{
+                    afterRepeatCount = partCount;
+                }
+            }
 
             const cut = {
                 part: part,
                 patternId: pattern.mapNum,
-                cutIndex: +line[3].trim(),
-                sequence: +line[4].trim(),
-                func: +line[5].trim(),
-                dimmension: +line[6].trim() + kerf,
+                cutIndex: +line[3],
+                sequence: +line[4],
+                func: +line[5],
+                dimmension: +line[6] + kerf,
                 partIndex: (part !== null) ? part.idx : 0,
-                quntPart: +line[9].trim() === 0 ? 0 : 1,
+                quantPart: afterRepeatCount,
             };
             cuts.push(cut);
-
-            for(let count = 1; count < +line[7].trim(); count++) {
+            //repeated cuts
+            for(let count = 1; count < +line[7]; count++) {
 
                 const cut = {
                     part: part,
                     patternId: pattern.mapNum,
-                    cutIndex: +line[3].trim(),
-                    sequence: +line[4].trim(),
-                    func: +line[5].trim(),
-                    dimmension: +line[6].trim() + kerf,
+                    cutIndex: +line[3],
+                    sequence: +line[4],
+                    func: +line[5],
+                    dimmension: +line[6] + kerf,
                     partIndex: (part !== null) ? part.idx : 0,
-                    quantPart: +line[9].trim() === 0 ? 0 : 1,
+                    quantPart: afterRepeatCount,
                 };
                 cuts.push(cut);
             }
@@ -224,7 +285,6 @@ class CutRiteLink {
             console.log(e);
             console.log(pattern);
         }
-
         let cutItems = {};
         try {
             cutItems = this.buildCutItems(startPoint, cuts, startLayer, dimmension, crossCut, 0, 0).nodes;
@@ -248,6 +308,13 @@ class CutRiteLink {
             const line = list[idx];
 
             if(this.getLayer(line.func) === layer){
+                //part is different in same place on new plate in book
+                if(line.sequence === 0 && line.dimmension === 0.0 && line.part !== null){
+                    nodes.push(
+                        new CutItem(line.part, dx, dy, line.quantPart)
+                    );
+                    continue;
+                }
                 if(crossCut === false){
                     dy += offset;
                 }else{
@@ -255,7 +322,7 @@ class CutRiteLink {
                 }
                 if(line.part !== null) {
                     nodes.push(
-                        new CutItem(line.part, dx, dy)
+                        new CutItem(line.part, dx, dy, line.quantPart)
                     );
                 }
                 offset = line.dimmension;
